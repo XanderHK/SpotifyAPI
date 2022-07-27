@@ -64,6 +64,8 @@ const getRandomTrack = async (params) => {
             }
         })
 
+        console.log(res)
+
         const result = {
             spotify_url: res.data.tracks.items[0].external_urls.spotify,
             name: res.data.tracks.items[0].name,
