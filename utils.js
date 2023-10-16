@@ -1,31 +1,6 @@
 const axios = require('axios');
-const { CLIENT_ID, CLIENT_SECRET, BASE_URI } = require('./cfg');
+const { sendRequest } = require('./axios');
 
-/**
- * Makes a request to the Spotify API to get an access token.
- * https://developer.spotify.com/documentation/general/guides/authorization/client-credentials/
- * @returns {Promise<{access_token: string, expires_in: number}>}
- */
-const authorize = async () => {
-    const data = new URLSearchParams({
-        grant_type: 'client_credentials',
-        json: true
-    })
-
-    const headers = {
-        headers: {
-            'Authorization': 'Basic ' + (new Buffer.from(CLIENT_ID + ':' + CLIENT_SECRET).toString('base64')),
-            'Content-Type': 'application/x-www-form-urlencoded'
-        }
-    }
-
-    try {
-        const res = await axios.post('https://accounts.spotify.com/api/token', data.toString(), headers)
-        return [res.data, null]
-    } catch (err) {
-        return [null, err]
-    }
-}
 
 const getRandomSearch = () => {
     const characters = 'abcdefghijklmnopqrstuvwxyz';
@@ -47,15 +22,11 @@ const getRandomSearch = () => {
 
 const getRandomTrack = async (params) => {
     try {
-        const { q, offset, access_token } = params;
+        const { q, offset } = params;
 
-        const res = await axios.get('https://api.spotify.com/v1/search', {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + access_token.access_token
-
-            },
-            params: {
+        const res = await sendRequest({
+            method: 'get',
+            url: '/search', params: {
                 q: q,
                 type: 'track',
                 limit: 1,
@@ -63,8 +34,6 @@ const getRandomTrack = async (params) => {
                 offset: offset
             }
         })
-
-        console.log(res)
 
         const result = {
             spotify_url: res.data.tracks.items[0].external_urls.spotify,
@@ -82,8 +51,65 @@ const getRandomTrack = async (params) => {
 
 const getRandomOffset = () => Math.floor(Math.random() * 999);
 
+const getSuggestions = async (params) => {
+    try {
+        const { seed_id } = params;
+
+        const res = await sendRequest({
+            method: 'get',
+            url: '/recommendations',
+            params: {
+                seed_tracks: seed_id,
+            },
+        })
+
+        const suggestions = res.data.tracks.reduce((suggestions, current_track) => {
+            const track = {
+                name: current_track.album.name,
+                artist: current_track.artists[0].name,
+                spotify_url: current_track.external_urls.spotify,
+                image: current_track.album.images[0].url,
+                preview_url: current_track.preview_url ?? null
+            }
+            suggestions.push(track);
+            return suggestions;
+        }, []);
+
+        return [suggestions, null];
+    } catch (err) {
+        return [null, err]
+    }
+}
+
+const getSearchResults = async (params) => {
+    try {
+        const { q } = params;
+
+        const res = await sendRequest({
+            method: 'get',
+            url: '/search',
+            params: {
+                q: q,
+                type: 'track'
+            }
+        })
+
+        const result = {
+            names: res.data.tracks.items.reduce((acc, curr) => {
+                acc.push({ name: curr.name, artist: curr.artists[0].name, id: curr.id })
+                return acc
+            }, [])
+        }
+
+        return [result, null]
+    } catch (err) {
+        return [null, err]
+    }
+}
+
 // Exports the functions
-exports.authorize = authorize
 exports.getRandomSearch = getRandomSearch
 exports.getRandomOffset = getRandomOffset
 exports.getRandomTrack = getRandomTrack
+exports.getSearchResults = getSearchResults
+exports.getSuggestions = getSuggestions
