@@ -35,6 +35,7 @@ const authorize = async () => {
     }
 }
 
+// Currently this only works for requests that need my access token but not the ones from the user
 const sendRequest = async (config) => {
     try {
         const [access_token, authorize_err] = await authorize();

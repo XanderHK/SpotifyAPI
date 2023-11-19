@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getRandomOffset, getRandomTrack, getRandomSearch, getSearchResults, getSuggestions } = require('./utils');
+const { getRandomOffset, getRandomTrack, getRandomSearch, getSearchResults, getSuggestions, getRefreshToken, getAccesstoToken } = require('./utils');
 
 router.get('/', async (req, res) => {
     const query = Object.keys(req.query).length !== 0 ? `genre:${req.query.genre}` : getRandomSearch();
@@ -36,5 +36,27 @@ router.post('/suggestions', async (req, res) => {
 
     res.status(200).json(result)
 });
+
+router.post('/refresh-token', async (req, res) => {
+    if (!req.body.data) return res.status(400).json({ error: 'Missing data' })
+    const [result, refresh_err] = await getRefreshToken(req.body.data)
+    if (refresh_err) {
+        res.status(500).json({ error: refresh_err.message });
+        return
+    }
+
+    res.status(200).json(result)
+})
+
+router.post('/access-token', async (req, res) => {
+    if (!req.body.data) return res.status(400).json({ error: 'Missing data' })
+    const [result, access_err] = await getAccesstoToken(req.body.data)
+    if (access_err) {
+        res.status(500).json({ error: access_err.message });
+        return
+    }
+
+    res.status(200).json(result)
+})
 
 module.exports = router
